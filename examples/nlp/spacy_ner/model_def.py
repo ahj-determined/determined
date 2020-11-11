@@ -54,7 +54,7 @@ class SpacyNerTrial(PythonTrial):
                 )
             return {"loss": losses['ner']}
 
-    def evaluate(self) -> Dict[str, Any]:
+    def evaluate_full_dataset(self) -> Dict[str, Any]:
         scorer = Scorer()
         for input_, annot in VAL_DATA:
             doc_gold_text = self.model.make_doc(input_)
