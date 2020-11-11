@@ -18,7 +18,7 @@ TRAIN_DATA = [
 
 VAL_DATA = [
     ("Who is Gene Simmons?", [(7, 19, "PERSON")]),
-    ("Is New York City your favorite place?", {"entities": [(3, 16, "LOC")]})
+    ("Is New York City your favorite place?",  [(3, 16, "LOC")])
 ]
 
 class SpacyNerTrial(PythonTrial):
@@ -34,7 +34,7 @@ class SpacyNerTrial(PythonTrial):
         ner.add_label('LOC')
         ner.add_label('PERSON')
 
-    def train_some(self, num_batches: int) -> Dict[str, Any]:
+    def train_some(self) -> Dict[str, Any]:
         # get names of other pipes to disable them during training
         pipe_exceptions = ["ner", "trf_wordpiecer", "trf_tok2vec"]
         other_pipes = [pipe for pipe in self.model.pipe_names if pipe not in pipe_exceptions]

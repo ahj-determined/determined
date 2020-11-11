@@ -9,3 +9,5 @@ searcher:
   max_length:
     batches: 1000
 entrypoint: model_def:SpacyNerTrial
+min_validation_period:
+  batches: 20
