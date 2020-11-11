@@ -12,7 +12,7 @@ from determined.python import PythonTrialContext
 from determined_common import check
 
 
-class PythonTrialController(det.LoopTrialController):
+class PythonTrialController(det.TrialController):
     def __init__(self, trial_inst: det.Trial, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -45,14 +45,6 @@ class PythonTrialController(det.LoopTrialController):
     def from_native(*args: Any, **kwargs: Any) -> det.TrialController:
         raise NotImplementedError("PythonTrial only supports the Trial API")
 
-    @staticmethod
-    def supports_mixed_precision() -> bool:
-        return False
-
-    @staticmethod
-    def supports_averaging_training_metrics() -> bool:
-        return False
-
     def _evaluate_full_dataset_defined(self) -> bool:
         return util.is_overridden(self.trial.evaluate_full_dataset, PythonTrial)
 
@@ -77,13 +69,10 @@ class PythonTrialController(det.LoopTrialController):
                 path = cast(pathlib.Path, args[0])
                 response_func(self._save(path))
             elif w.kind == workload.Workload.Kind.TERMINATE:
-                response_func({} if self.is_chief else workload.Skipped())
+                response_func(workload.Skipped())
                 break
             else:
                 raise AssertionError("Unexpected workload: {}".format(w.kind))
-
-    def get_epoch_idx(self, batch_id: int) -> int:
-        return 1  # TODO: BAD
 
     def _train_for_step(
         self, step_id: int, num_batches: int, total_batches_processed: int
@@ -103,25 +92,19 @@ class PythonTrialController(det.LoopTrialController):
 
         metrics = det.util.make_metrics(None, per_batch_metrics)
 
-        if not self.is_chief:
-            # The training metrics are reported only in the chief process.
-            return workload.Skipped()
-
         logging.debug(f"Done training step: {num_batches} batches in {num_batches} batches.")
 
         return metrics
 
     def _compute_validation_metrics(self) -> workload.Response:
-        num_inputs = 0
         metrics = {}  # type: Optional[Dict[str, Any]]
         check.true(self._evaluate_full_dataset_defined())
 
-        if self.is_chief:
-            metrics = self.trial.evaluate_full_dataset()
+        metrics = self.trial.evaluate_full_dataset()
 
-            check.is_instance(
-                metrics, dict, f"eval() must return a dictionary, got {type(metrics)}."
-            )
+        check.is_instance(
+            metrics, dict, f"eval() must return a dictionary, got {type(metrics)}."
+        )
         # for callback in self.callbacks.values():
         #     logging.warning(
         #         "on_validation_step_end is now deprecated, please use on_validation_end instead"
@@ -131,10 +114,7 @@ class PythonTrialController(det.LoopTrialController):
         # for callback in self.callbacks.values():
         #     callback.on_validation_end(cast(Dict[str, Any], metrics))
 
-        if not self.is_chief:
-            return workload.Skipped()
-
-        num_inputs = 1  # TODO: figure this out
+        num_inputs = None  # TODO: figure this out
         return {"num_inputs": num_inputs, "validation_metrics": metrics}
 
     def _load(self) -> None:
@@ -143,9 +123,6 @@ class PythonTrialController(det.LoopTrialController):
         self.trial.load(self.load_path)
 
     def _save(self, path: pathlib.Path) -> workload.Response:
-        if not self.is_chief:
-            return workload.Skipped()
-
         path.mkdir(parents=True, exist_ok=True)
 
         # The model code is the current working directory.
