@@ -1,0 +1,21 @@
+description: xgboost_iris
+hyperparameters:
+  global_batch_size: 64
+  eta:
+    type: double
+    count: 3
+    minval: 0.2
+    maxval: 0.4
+  max_depth:
+    type: int
+    count: 3
+    minval: 2
+    maxval: 4
+  objective: multi:softprob
+  num_class: 3
+searcher:
+  name: grid
+  metric: accuracy
+  max_length:
+    batches: 1
+entrypoint: model_def:XGBoostTrial
