@@ -7,7 +7,7 @@ searcher:
   metric: val_f1
   smaller_is_better: false
   max_length:
-    batches: 1000
+    batches: 50
 entrypoint: model_def:SpacyNerTrial
 min_validation_period:
-  batches: 20
+  batches: 5

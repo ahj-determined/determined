@@ -8,18 +8,7 @@ from spacy.gold import GoldParse
 
 from determined.python import PythonTrial, PythonTrialContext
 
-# TODO: better NER data
-TRAIN_DATA = [
-    ("Who is Shaka Khan?", {"entities": [(7, 17, "PERSON")]}),
-    ("I like London and Berlin.", {"entities": [(7, 13, "LOC"), (18, 24, "LOC")]}),
-    ("Where is Idaho?", {"entities": [(9, 14, "LOC")]}),
-    ("My favorite city is Boston.", {"entities": [(20, 26, "LOC")]})
-]
-
-VAL_DATA = [
-    ("Who is Gene Simmons?", [(7, 19, "PERSON")]),
-    ("Is New York City your favorite place?",  [(3, 16, "LOC")])
-]
+import data
 
 class SpacyNerTrial(PythonTrial):
     def __init__(self, context: PythonTrialContext) -> None:
@@ -31,8 +20,11 @@ class SpacyNerTrial(PythonTrial):
         self.model.add_pipe(ner, last=True)
 
         # for all labels ner.add_label(label)
-        ner.add_label('LOC')
-        ner.add_label('PERSON')
+        self.training_data, entity_types = data.create_data('train.txt', True)
+        self.validation_data, _ = data.create_data('val.txt', False)
+
+        for entity_type in entity_types:
+            ner.add_label(entity_type)
 
     def train_some(self) -> Dict[str, Any]:
         # get names of other pipes to disable them during training
@@ -40,23 +32,22 @@ class SpacyNerTrial(PythonTrial):
         other_pipes = [pipe for pipe in self.model.pipe_names if pipe not in pipe_exceptions]
         with self.model.disable_pipes(*other_pipes), warnings.catch_warnings():
             self.model.begin_training()
-            random.shuffle(TRAIN_DATA)
+            random.shuffle(self.training_data)
             losses = {}
-            batches = minibatch(TRAIN_DATA, size=compounding(4.0, 32.0, 1.001))
+            batches = minibatch(self.training_data, size=compounding(4.0, 32.0, 1.001))
             for batch in batches:
                 texts, annotations = zip(*batch)
                 self.model.update(
                     texts,
                     annotations,
-                    #drop=self.context.get_hparam("dropout"),
-                    drop=0.5,
-                    losses=losses,
+                    drop=self.context.get_hparam("dropout"),
+                    losses=losses
                 )
             return {"loss": losses['ner']}
 
     def evaluate_full_dataset(self) -> Dict[str, Any]:
         scorer = Scorer()
-        for input_, annot in VAL_DATA:
+        for input_, annot in self.validation_data:
             doc_gold_text = self.model.make_doc(input_)
             gold = GoldParse(doc_gold_text, entities=annot)
             pred_value = self.model(input_)
