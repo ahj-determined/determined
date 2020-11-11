@@ -1,0 +1,11 @@
+description: spacy_ner_const
+hyperparameters:
+  global_batch_size: 1
+  dropout: 0.5
+searcher:
+  name: single
+  metric: val_f1
+  smaller_is_better: false
+  max_length:
+    batches: 1000
+entrypoint: model_def:SpacyNerTrial
