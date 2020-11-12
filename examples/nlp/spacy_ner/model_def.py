@@ -19,7 +19,6 @@ class SpacyNerTrial(PythonTrial):
         ner = self.model.create_pipe("ner")
         self.model.add_pipe(ner, last=True)
 
-        # for all labels ner.add_label(label)
         self.training_data, entity_types = data.create_data('train.txt', True)
         self.validation_data, _ = data.create_data('val.txt', False)
 
@@ -56,7 +55,6 @@ class SpacyNerTrial(PythonTrial):
             gold = GoldParse(doc_gold_text, entities=annot)
             pred_value = self.model(input_)
             scorer.score(pred_value, gold)
-        scorer.scores
         return {
             "val_precision": scorer.scores['ents_p'],
             "val_recall": scorer.scores['ents_r'],
