@@ -4,6 +4,7 @@ import random
 from abc import abstractmethod
 from typing import Any, Dict, Optional, cast
 
+import cloudpickle
 import numpy as np
 
 import determined as det
@@ -102,9 +103,7 @@ class PythonTrialController(det.TrialController):
 
         metrics = self.trial.evaluate_full_dataset()
 
-        check.is_instance(
-            metrics, dict, f"eval() must return a dictionary, got {type(metrics)}."
-        )
+        check.is_instance(metrics, dict, f"eval() must return a dictionary, got {type(metrics)}.")
         # for callback in self.callbacks.values():
         #     logging.warning(
         #         "on_validation_step_end is now deprecated, please use on_validation_end instead"
@@ -120,7 +119,15 @@ class PythonTrialController(det.TrialController):
     def _load(self) -> None:
         if not self.load_path:
             return
-        self.trial.load(self.load_path)
+
+        modelPath = self.load_path.joinpath("model")
+        rngPath = self.load_path.joinpath("rng_state.pkl")
+        self.trial.load(modelPath)
+
+        with open(rngPath, "rb") as f:
+            rng_state = cloudpickle.load(f)
+        np.random.set_state(rng_state["np_rng_state"])
+        random.setstate(rng_state["random_rng_state"])
 
     def _save(self, path: pathlib.Path) -> workload.Response:
         path.mkdir(parents=True, exist_ok=True)
@@ -128,7 +135,17 @@ class PythonTrialController(det.TrialController):
         # The model code is the current working directory.
         util.write_user_code(path)
 
-        self.trial.save(path)
+        modelPath = path.joinpath("model")
+        rngPath = path.joinpath("rng_state.pkl")
+
+        rng_state = {
+            "np_rng_state": np.random.get_state(),
+            "random_rng_state": random.getstate(),
+        }
+        with open(rngPath, "wb") as f:
+            cloudpickle.dump(rng_state, f)
+
+        self.trial.save(modelPath)
 
         return cast(
             workload.Response,
