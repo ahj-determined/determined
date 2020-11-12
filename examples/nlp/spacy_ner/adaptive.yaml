@@ -12,6 +12,7 @@ searcher:
   max_length:
     batches: 50
   max_trials: 64
+  max_concurrent_trials: 32
 entrypoint: model_def:SpacyNerTrial
 min_validation_period:
   batches: 5
