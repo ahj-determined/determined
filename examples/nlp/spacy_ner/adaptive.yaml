@@ -1,0 +1,17 @@
+description: spacy_ner_adaptive
+hyperparameters:
+  global_batch_size: 1
+  dropout:
+    type: double
+    minval: 0.1
+    maxval: 0.8
+searcher:
+  name: adaptive_asha
+  metric: val_f1
+  smaller_is_better: false
+  max_length:
+    batches: 50
+  max_trials: 64
+entrypoint: model_def:SpacyNerTrial
+min_validation_period:
+  batches: 5
