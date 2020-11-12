@@ -26,12 +26,16 @@ class SpacyNerTrial(PythonTrial):
         for entity_type in entity_types:
             ner.add_label(entity_type)
 
+        optimizer = self.model.begin_training()
+        optimizer.learn_rate = self.context.get_hparam("lr")
+        optimizer.beta1 = self.context.get_hparam("beta1")
+        optimizer.beta1 = self.context.get_hparam("beta2")
+
     def train_some(self) -> Dict[str, Any]:
         # get names of other pipes to disable them during training
         pipe_exceptions = ["ner", "trf_wordpiecer", "trf_tok2vec"]
         other_pipes = [pipe for pipe in self.model.pipe_names if pipe not in pipe_exceptions]
         with self.model.disable_pipes(*other_pipes), warnings.catch_warnings():
-            self.model.begin_training()
             random.shuffle(self.training_data)
             losses = {}
             batches = minibatch(self.training_data, size=compounding(4.0, 32.0, 1.001))
@@ -64,3 +68,4 @@ class SpacyNerTrial(PythonTrial):
 
     def load(self, path: str) -> None:
         self.model = spacy.load(path)
+        self.model.resume_training()
