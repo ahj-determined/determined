@@ -1,13 +1,16 @@
-description: BERT_IMDB
+description: BERT_IMDB_PyTorch
 hyperparameters:
-  global_batch_size: 32
   learning_rate: 1e-2
+  global_batch_size: 4 # Per-GPU batch size of 32
+resources:
+  slots_per_trial: 2
 records_per_epoch: 50000
 searcher:
   name: single
-  metric: validation_accuracy
+  metric: validation_acc
+  smaller_is_better: False
   max_length:
     epochs: 32
 entrypoint: model_def:IMDBSentimentClassifier
 min_validation_period:
-  epochs: 1
+  batches: 300
